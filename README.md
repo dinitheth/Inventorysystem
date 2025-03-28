@@ -1,2 +1,0 @@
-# IMS-KA_Electricals
- 
