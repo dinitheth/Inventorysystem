@@ -35,8 +35,8 @@ if (isset($_GET['s_id'])) {
     
     // Company Address
     $pdf->SetFont('Arial', '', 10);
-    $pdf->Cell(190, 5, '123 Main Street, Colombo, Sri Lanka', 0, 1, 'C');
-    $pdf->Cell(190, 5, 'Tel: +94 123 456 789 | Email: info@kaelectricals.com', 0, 1, 'C');
+    $pdf->Cell(190, 5, '428/C, Colombo Road, Kohuwala', 0, 1, 'C');
+    $pdf->Cell(190, 5, 'Tel: +94 714 027 788 | Email: kaelectrials@gmail.com', 0, 1, 'C');
     $pdf->Line(10, 30, 200, 30); // Horizontal line under header
     $pdf->Ln(5);
 
@@ -123,7 +123,6 @@ if (isset($_GET['s_id'])) {
     $pdf->Ln(10);
     $pdf->SetFont('Arial', 'I', 8);
     $pdf->Cell(190, 5, 'For questions or concerns about your purchase, please contact us:', 0, 1, 'C');
-    $pdf->Cell(190, 5, 'Phone: +94 123 456 789 | Email: support@kaelectricals.com | Website: www.kaelectricals.com', 0, 1, 'C');
     
     // Output the PDF (download)
     $pdf->Output();

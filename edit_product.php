@@ -7,7 +7,6 @@
 <?php
 $product = find_by_id('products',(int)$_GET['id']);
 $all_categories = find_all('categories');
-$all_photo = find_all('media');
 if(!$product){
   $session->msg("d","Missing product id.");
   redirect('product.php');
@@ -25,15 +24,13 @@ if(!$product){
        $p_buy   = remove_junk($db->escape($_POST['buying-price']));
        $p_sale  = remove_junk($db->escape($_POST['saleing-price']));
        $p_min   = remove_junk($db->escape($_POST['minimum-quantity']));
-       if (is_null($_POST['product-photo']) || $_POST['product-photo'] === "") {
-         $media_id = '0';
-       } else {
-         $media_id = remove_junk($db->escape($_POST['product-photo']));
-       }
+       
+       // Removed media_id handling since we're removing the image section
+       
        $query   = "UPDATE products SET";
        $query  .=" name ='{$p_name}', quantity ='{$p_qty}',";
        $query  .=" buy_price ='{$p_buy}', sale_price ='{$p_sale}', categorie_id ='{$p_cat}',";
-       $query  .=" media_id='{$media_id}', minimum_quantity='{$p_min}'";
+       $query  .=" minimum_quantity='{$p_min}'";
        $query  .=" WHERE id ='{$product['id']}'";
        $result = $db->query($query);
                if($result && $db->affected_rows() === 1){
@@ -51,6 +48,9 @@ if(!$product){
 
  }
 
+// Check if this is a restock request
+$is_restock = isset($_GET['restock']) && $_GET['restock'] === 'true';
+
 ?>
 <?php include_once('layouts/header.php'); ?>
 <div class="row">
@@ -63,7 +63,7 @@ if(!$product){
         <div class="panel-heading">
           <strong>
             <span class="glyphicon glyphicon-th"></span>
-            <span>Edit Product</span>
+            <span><?php echo $is_restock ? 'Restock Product' : 'Edit Product'; ?></span>
          </strong>
         </div>
         <div class="panel-body">
@@ -79,7 +79,7 @@ if(!$product){
               </div>
               <div class="form-group">
                 <div class="row">
-                  <div class="col-md-6">
+                  <div class="col-md-12">
                     <select class="form-control" name="product-categorie">
                     <option value=""> Select a categorie</option>
                    <?php  foreach ($all_categories as $cat): ?>
@@ -87,15 +87,6 @@ if(!$product){
                        <?php echo remove_junk($cat['name']); ?></option>
                    <?php endforeach; ?>
                  </select>
-                  </div>
-                  <div class="col-md-6">
-                    <select class="form-control" name="product-photo">
-                      <option value=""> No image</option>
-                      <?php  foreach ($all_photo as $photo): ?>
-                        <option value="<?php echo (int)$photo['id'];?>" <?php if($product['media_id'] === $photo['id']): echo "selected"; endif; ?> >
-                          <?php echo $photo['file_name'] ?></option>
-                      <?php endforeach; ?>
-                    </select>
                   </div>
                 </div>
               </div>
@@ -118,10 +109,9 @@ if(!$product){
                     <label for="qty">Buying price</label>
                     <div class="input-group">
                       <span class="input-group-addon">
-                        <i class="glyphicon glyphicon-usd"></i>
+                        Rs.
                       </span>
                       <input type="number" class="form-control" name="buying-price" value="<?php echo remove_junk($product['buy_price']);?>">
-                      <span class="input-group-addon">.00</span>
                    </div>
                   </div>
                  </div>
@@ -130,10 +120,9 @@ if(!$product){
                      <label for="qty">Selling price</label>
                      <div class="input-group">
                        <span class="input-group-addon">
-                         <i class="glyphicon glyphicon-usd"></i>
+                         Rs.
                        </span>
                        <input type="number" class="form-control" name="saleing-price" value="<?php echo remove_junk($product['sale_price']);?>">
-                       <span class="input-group-addon">.00</span>
                     </div>
                    </div>
                   </div>
@@ -150,7 +139,17 @@ if(!$product){
                   </div>
                </div>
               </div>
+              
+              <?php if($is_restock): ?>
+              <!-- Add a highlighted message for restock mode -->
+              <div class="alert alert-info">
+                <i class="glyphicon glyphicon-info-sign"></i>
+                Update the quantity above to restock this product.
+              </div>
+              <button type="submit" name="product" class="btn btn-success">Save Restock</button>
+              <?php else: ?>
               <button type="submit" name="product" class="btn btn-danger">Update</button>
+              <?php endif; ?>
           </form>
          </div>
         </div>

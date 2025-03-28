@@ -27,7 +27,7 @@ $page_title = 'Sale Report';
                 </div>
             </div>
             <div class="form-group">
-                 <button type="submit" name="submit" class="btn btn-primary">Generate Report</button>
+            <button type="submit" name="submit" class="btn btn-primary" onclick="this.form.target='_blank';">Generate Report</button>
             </div>
           </form>
       </div>

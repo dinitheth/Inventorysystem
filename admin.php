@@ -50,7 +50,7 @@
   $page_title = 'Admin Home Page';
   require_once('includes/load.php');
   // Checkin What level user has permission to view this page
-   page_require_level(1);
+   page_require_level(3);
 ?>
 <?php
  $c_categorie     = count_by_id('categories');
@@ -121,7 +121,7 @@
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
         <a href="sales.php" class="dashboard-card bg-green">
             <div class="card-icon" style="font-size: 22px; font-weight: bold; margin-bottom: -0.3px;">
-                R.s
+                Rs.
             </div>
             <div class="card-content">
                 <h2 style="margin-top: 0;"><?php echo number_format($total_sales_amount, 2); ?></h2>
@@ -191,7 +191,7 @@
            </a>
            </td>
            <td><?php echo remove_junk(ucfirst($recent_sale['date'])); ?></td>
-           <td>R.s <?php echo remove_junk(first_character($recent_sale['price'])); ?></td>
+           <td>Rs. <?php echo remove_junk(first_character($recent_sale['price'])); ?></td>
         </tr>
 
        <?php endforeach; ?>

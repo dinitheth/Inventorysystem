@@ -71,8 +71,8 @@
                 </select>
             </div>
             <div class="form-group clearfix">
-              <button type="submit" name="add_user" class="btn btn-primary">Add User</button>
-            </div>
+    <button type="submit" name="add_user" class="btn btn-primary">Add User</button>
+</div>
         </form>
         </div>
 

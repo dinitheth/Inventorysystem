@@ -13,26 +13,14 @@ if (isset($_GET['id'])) {
     $sale_id = $_GET['sale_id'];
 }
 
-// If sale_id is still empty, try looking up in the database
-if (empty($sale_id) && !empty($product_ids[0]) && !empty($date)) {
-    $sql = "SELECT id FROM sales WHERE product_id = '{$product_ids[0]}' AND date = '{$date}' ORDER BY id DESC LIMIT 1";
-    $result = $db->query($sql);
-    if ($db->num_rows($result) > 0) {
-        $sale = $db->fetch_assoc($result);
-        $sale_id = $sale['id'];
-    }
-}
-
-// Uncomment to debug
-// echo "<pre>Sale ID: " . $sale_id . "</pre>";
-// echo "<pre>GET Parameters: "; print_r($_GET); echo "</pre>";
+// Get other parameters
 $product_id = isset($_GET['s_id']) ? $_GET['s_id'] : '';
 $quantity = isset($_GET['quantity']) ? $_GET['quantity'] : '';
 $total = isset($_GET['total']) ? $_GET['total'] : '';
 $date = isset($_GET['date']) ? $_GET['date'] : '';
 
 // Check if we have multiple items (comma-separated values)
-$is_multi_item = (strpos($quantity, ',') !== false);
+$is_multi_item = (strpos($product_id, ',') !== false);
 
 // Parse comma-separated values into arrays
 $product_ids = explode(',', $product_id);
@@ -45,11 +33,41 @@ foreach($totals as $item_total) {
     $order_total += floatval($item_total);
 }
 
+// Get sale IDs for all products
+$sale_ids = array();
+
+// For each product ID, try to get the corresponding sale ID
+for($i = 0; $i < count($product_ids); $i++) {
+    if(empty($product_ids[$i])) continue;
+    
+    $sql = "SELECT id FROM sales WHERE product_id = '{$product_ids[$i]}' AND date = '{$date}'";
+    
+    // If we have quantity info, add it to the query
+    if(isset($quantities[$i]) && !empty($quantities[$i])) {
+        $sql .= " AND qty = '{$quantities[$i]}'";
+    }
+    
+    // Order by most recent and limit to 1
+    $sql .= " ORDER BY id DESC LIMIT 1";
+    
+    $result = $db->query($sql);
+    if ($result && $db->num_rows($result) > 0) {
+        $sale_record = $db->fetch_assoc($result);
+        $sale_ids[$i] = $sale_record['id'];
+    } else {
+        $sale_ids[$i] = 'N/A';
+    }
+}
+
+// Use first sale ID as the main sale ID if not already set
+if(empty($sale_id) && !empty($sale_ids) && isset($sale_ids[0]) && $sale_ids[0] !== 'N/A') {
+    $sale_id = $sale_ids[0];
+}
 ?>
 
 <div class="receipt-container">
     <h2>Sales Receipt</h2>
-    <p><strong>Receipt#</strong> <?php echo htmlspecialchars($sale_id); ?></p>
+    <p><strong>Receipt#</strong> <?php echo $is_multi_item ? 'Multiple' : htmlspecialchars($sale_id); ?></p>
     <p><strong>Date:</strong> <?php echo htmlspecialchars($date); ?></p>
     
     <table class="items-table">
@@ -65,21 +83,14 @@ foreach($totals as $item_total) {
             <?php 
             // Loop through all items
             for($i = 0; $i < count($product_ids); $i++): 
+                if(empty($product_ids[$i])) continue;
+                
                 // Get product name
                 $product = find_by_id('products', $product_ids[$i]);
                 $product_name = $product ? $product['name'] : 'Unknown Product';
                 
-                // For multi-item receipts, we need to look up individual sale IDs
-                $item_sale_id = $sale_id;
-                if($is_multi_item) {
-                    // Try to look up the specific sale ID for this product
-                    $sql = "SELECT id FROM sales WHERE product_id = '{$product_ids[$i]}' AND date = '{$date}' ORDER BY id DESC LIMIT 1";
-                    $result = $db->query($sql);
-                    if ($db->num_rows($result) > 0) {
-                        $sale_record = $db->fetch_assoc($result);
-                        $item_sale_id = $sale_record['id'];
-                    }
-                }
+                // Use the sale ID we looked up earlier
+                $item_sale_id = isset($sale_ids[$i]) ? $sale_ids[$i] : 'N/A';
             ?>
             <tr>
                 <td><?php echo htmlspecialchars($item_sale_id); ?></td>
@@ -100,6 +111,11 @@ foreach($totals as $item_total) {
     <a href="generate_pdf.php?id=<?php echo $sale_id; ?>&s_id=<?php echo $product_id; ?>&quantity=<?php echo $quantity; ?>&total=<?php echo $total; ?>&date=<?php echo $date; ?>"
         class="btn btn-success" target="_blank">
        Generate PDF Receipt
+    </a>
+    
+    <!-- Back to Sales button -->
+    <a href="sales.php" class="btn btn-primary">
+        Back to Sales
     </a>
 </div>
 
@@ -155,15 +171,23 @@ foreach($totals as $item_total) {
   .btn {
     display: inline-block;
     padding: 8px 16px;
-    margin-top: 15px;
+    margin: 15px 5px;
     background-color: #28a745;
     color: white;
     text-decoration: none;
     border-radius: 4px;
   }
   
+  .btn-primary {
+    background-color: #007bff;
+  }
+  
   .btn:hover {
     background-color: #218838;
+  }
+  
+  .btn-primary:hover {
+    background-color: #0069d9;
   }
 </style>
 

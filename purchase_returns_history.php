@@ -2,7 +2,7 @@
   $page_title = 'Purchase Returns History';
   require_once('includes/load.php');
   // Checkin What level user has permission to view this page
-  page_require_level(2);
+  page_require_level(3);
   
   // Fetch all purchase returns with product details
   $sql = "SELECT r.id, r.return_quantity, r.return_date, r.reason, ";

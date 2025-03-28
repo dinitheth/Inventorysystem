@@ -2,7 +2,7 @@
   $page_title = 'Add Customer';
   require_once('includes/load.php');
   // Checkin What level user has permission to view this page
-  page_require_level(2);
+  page_require_level(3);
 ?>
 <?php
  if(isset($_POST['add_customer'])){

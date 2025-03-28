@@ -2,7 +2,7 @@
   $page_title = 'Database Restore';
   require_once('includes/load.php');
   // Checking what level user has permission to view this page
-  page_require_level(1);
+  page_require_level(3);
 ?>
 <?php include_once('layouts/header.php'); ?>
 
@@ -27,6 +27,9 @@ function restoreDatabase($host, $user, $pass, $dbname, $sql_file) {
             return array('status' => 'error', 'message' => 'Could not read SQL file');
         }
 
+        // Temporarily disable foreign key checks
+        $link->query('SET FOREIGN_KEY_CHECKS=0');
+        
         // Split SQL by semicolon to get separate queries
         $queries = explode(';', $sql);
         
@@ -50,13 +53,19 @@ function restoreDatabase($host, $user, $pass, $dbname, $sql_file) {
         // Commit or rollback based on results
         if ($error) {
             $link->rollback();
+            $link->query('SET FOREIGN_KEY_CHECKS=1'); // Re-enable foreign key checks
             return array('status' => 'error', 'message' => 'Error executing SQL: ' . $error_message);
         } else {
             $link->commit();
+            $link->query('SET FOREIGN_KEY_CHECKS=1'); // Re-enable foreign key checks
             return array('status' => 'success', 'message' => 'Database restored successfully.');
         }
         
     } catch (Exception $e) {
+        // Make sure to re-enable foreign key checks even if an exception occurs
+        if (isset($link) && $link instanceof mysqli) {
+            $link->query('SET FOREIGN_KEY_CHECKS=1');
+        }
         return array('status' => 'error', 'message' => 'Exception: ' . $e->getMessage());
     }
 }
@@ -134,6 +143,13 @@ if (isset($_FILES['backup_file']) && $_FILES['backup_file']['error'] === 0) {
 <div class="row">
     <div class="col-md-12">
         <?php echo display_msg($msg); ?>
+        
+        <?php if(isset($restore_result) && $restore_result['status'] == 'success'): ?>
+        <div class="alert alert-success">
+            <strong><i class="glyphicon glyphicon-ok"></i> Success!</strong> 
+            <?php echo $restore_result['message']; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -222,5 +238,51 @@ if (isset($_FILES['backup_file']) && $_FILES['backup_file']['error'] === 0) {
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Find the upload form
+    var uploadForm = document.querySelector('form[enctype="multipart/form-data"]');
+    
+    if (uploadForm) {
+        // Add submit event listener
+        uploadForm.addEventListener('submit', function(e) {
+            // Prevent the default form submission (page refresh)
+            e.preventDefault();
+            
+            // Get the file input
+            var fileInput = document.getElementById('backup_file');
+            
+            // Check if a file was selected
+            if (fileInput.files.length === 0) {
+                alert('Please select a file to upload.');
+                return;
+            }
+            
+            // Create FormData object
+            var formData = new FormData();
+            formData.append('backup_file', fileInput.files[0]);
+            
+            // Create and configure XMLHttpRequest object
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'restore.php', true);
+            
+            // Set up response handler
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // Success - reload the page to show the updated list
+                    window.location.reload();
+                } else {
+                    // Error
+                    alert('Upload failed. Please try again.');
+                }
+            };
+            
+            // Send the request
+            xhr.send(formData);
+        });
+    }
+});
+</script>
 
 <?php include_once('layouts/footer.php'); ?>

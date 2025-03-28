@@ -10,6 +10,7 @@ function find_all($table) {
    {
      return find_by_sql("SELECT * FROM ".$db->escape($table));
    }
+   return array(); // Return empty array if table doesn't exist
 }
 /*--------------------------------------------------------------*/
 /* Function for Perform queries
@@ -18,8 +19,25 @@ function find_by_sql($sql)
 {
   global $db;
   $result = $db->query($sql);
+  
+  // Check if query execution failed
+  if($result === false) {
+    return array(); // Return empty array if query failed
+  }
+  
+  // Check if no rows returned
+  if($db->num_rows($result) <= 0) {
+    return array(); // Return empty array if no rows
+  }
+  
   $result_set = $db->while_loop($result);
- return $result_set;
+  
+  // Final check to ensure we have an array
+  if(!is_array($result_set)) {
+    return array(); // Return empty array if result is not an array
+  }
+  
+  return $result_set;
 }
 /*--------------------------------------------------------------*/
 /*  Function for Find data from table by id
@@ -35,6 +53,7 @@ function find_by_id($table,$id)
           else
             return null;
      }
+   return null; // Return null if table doesn't exist
 }
 /*--------------------------------------------------------------*/
 /* Function for Delete data from table by id
@@ -50,6 +69,7 @@ function delete_by_id($table,$id)
     $db->query($sql);
     return ($db->affected_rows() === 1) ? true : false;
    }
+   return false; // Return false if table doesn't exist
 }
 /*--------------------------------------------------------------*/
 /* Function for Count id  By table name
@@ -61,8 +81,11 @@ function count_by_id($table){
   {
     $sql    = "SELECT COUNT(id) AS total FROM ".$db->escape($table);
     $result = $db->query($sql);
-     return($db->fetch_assoc($result));
+    if($result) {
+      return($db->fetch_assoc($result));
+    }
   }
+  return array('total' => 0); // Return 0 count if table doesn't exist or query fails
 }
 /*--------------------------------------------------------------*/
 /* Determine if database table exists
@@ -76,6 +99,7 @@ function tableExists($table){
          else
               return false;
       }
+      return false; // Return false if query fails
   }
  /*--------------------------------------------------------------*/
  /* Login with the data provided in $_POST,
@@ -87,7 +111,7 @@ function tableExists($table){
     $password = $db->escape($password);
     $sql  = sprintf("SELECT id,username,password,user_level FROM users WHERE username ='%s' LIMIT 1", $username);
     $result = $db->query($sql);
-    if($db->num_rows($result)){
+    if($result && $db->num_rows($result)){
       $user = $db->fetch_assoc($result);
       $password_request = sha1($password);
       if($password_request === $user['password'] ){
@@ -107,7 +131,7 @@ function tableExists($table){
      $password = $db->escape($password);
      $sql  = sprintf("SELECT id,username,password,user_level FROM users WHERE username ='%s' LIMIT 1", $username);
      $result = $db->query($sql);
-     if($db->num_rows($result)){
+     if($result && $db->num_rows($result)){
        $user = $db->fetch_assoc($result);
        $password_request = sha1($password);
        if($password_request === $user['password'] ){
@@ -176,9 +200,12 @@ function tableExists($table){
   function find_by_groupLevel($level)
   {
     global $db;
-    $sql = "SELECT group_level FROM user_groups WHERE group_level = '{$db->escape($level)}' LIMIT 1 ";
+    $sql = "SELECT group_level, group_status FROM user_groups WHERE group_level = '{$db->escape($level)}' LIMIT 1 ";
     $result = $db->query($sql);
-    return($db->num_rows($result) === 0 ? true : false);
+    if($result && $db->num_rows($result) > 0) {
+      return $db->fetch_assoc($result);
+    }
+    return array('group_level' => 0, 'group_status' => 0);
   }
   /*--------------------------------------------------------------*/
   /* Function for cheaking which user level has access to page
@@ -186,24 +213,40 @@ function tableExists($table){
    function page_require_level($require_level){
      global $session;
      $current_user = current_user();
-     $login_level = find_by_groupLevel($current_user['user_level']);
-     //if user not login
+     
+     // Check if user is logged in
      if (!$session->isUserLoggedIn(true)):
-            $session->msg('d','Please login...');
-            redirect('index.php', false);
-      //if Group status Deactive
-     elseif($login_level['group_status'] === '0'):
-           $session->msg('d','This level user has been band!');
-           redirect('home.php',false);
-      //cheackin log in User level and Require level is Less than or equal to
-     elseif($current_user['user_level'] <= (int)$require_level):
-              return true;
-      else:
-            $session->msg("d", "Sorry! you dont have permission to view the page.");
-            redirect('home.php', false);
-        endif;
-
+          $session->msg('d','Please login...');
+          redirect('index.php', false);
+          return false;
+     endif;
+     
+     // Ensure current_user is an array
+     if(!is_array($current_user)) {
+          $session->msg('d','User account issue. Please logout and login again.');
+          redirect('index.php', false);
+          return false;
      }
+     
+     // Get user group info
+     $login_level = find_by_groupLevel($current_user['user_level']);
+     
+     // Check if group status is active
+     if(isset($login_level['group_status']) && $login_level['group_status'] === '0'):
+          $session->msg('d','This level user has been banned!');
+          redirect('home.php',false);
+          return false;
+     endif;
+     
+     // Check if user level meets requirement
+     if(isset($current_user['user_level']) && $current_user['user_level'] <= (int)$require_level):
+          return true;
+     else:
+          $session->msg("d", "Sorry! you dont have permission to view the page.");
+          redirect('home.php', false);
+          return false;
+     endif;
+   }
    /*--------------------------------------------------------------*/
    /* Function for Finding all product name
    /* JOIN with categorie  and media database table
@@ -278,7 +321,23 @@ function tableExists($table){
    $sql .= " LEFT JOIN products p ON p.id = s.product_id ";
    $sql .= " GROUP BY s.product_id";
    $sql .= " ORDER BY SUM(s.qty) DESC LIMIT ".$db->escape((int)$limit);
-   return $db->query($sql);
+   
+   $result = $db->query($sql);
+   
+   // Check if query failed or has no rows
+   if($result === false || $db->num_rows($result) <= 0) {
+     return array();
+   }
+   
+   // Convert result to array for consistency
+   $sales_data = array();
+   while($row = $db->fetch_assoc($result)) {
+     if(is_array($row)) {
+       $sales_data[] = $row;
+     }
+   }
+   
+   return $sales_data;
  }
  /*--------------------------------------------------------------*/
  /* Function for find all sales
@@ -305,26 +364,59 @@ function find_recent_sale_added($limit){
 /*--------------------------------------------------------------*/
 /* Function for Generate sales report by two dates
 /*--------------------------------------------------------------*/
-function find_sale_by_dates($start_date,$end_date){
+function find_sale_by_dates($start_date, $end_date){
   global $db;
-  $start_date  = date("Y-m-d", strtotime($start_date));
-  $end_date    = date("Y-m-d", strtotime($end_date));
-  $sql  = "SELECT s.date, p.name,p.sale_price,p.buy_price,";
-  $sql .= "COUNT(s.product_id) AS total_records,";
-  $sql .= "SUM(s.qty) AS total_sales,";
-  $sql .= "SUM(p.sale_price * s.qty) AS total_saleing_price,";
-  $sql .= "SUM(p.buy_price * s.qty) AS total_buying_price ";
-  $sql .= "FROM sales s ";
-  $sql .= "LEFT JOIN products p ON s.product_id = p.id";
-  $sql .= " WHERE s.date BETWEEN '{$start_date}' AND '{$end_date}'";
-  $sql .= " GROUP BY DATE(s.date),p.name";
-  $sql .= " ORDER BY DATE(s.date) DESC";
-  return $db->query($sql);
+  
+  // Ensure valid date formats
+  if(!$start_date || !$end_date) {
+    return array();
+  }
+  
+  try {
+    $start_date = date("Y-m-d", strtotime($start_date));
+    $end_date = date("Y-m-d", strtotime($end_date));
+    $sql  = "SELECT s.date, p.name, p.sale_price, p.buy_price, ";
+    $sql .= "COUNT(s.product_id) AS total_records, ";
+    $sql .= "SUM(s.qty) AS total_sales, ";
+    $sql .= "SUM(p.sale_price * s.qty) AS total_saleing_price, ";
+    $sql .= "SUM(p.buy_price * s.qty) AS total_buying_price ";
+    $sql .= "FROM sales s ";
+    $sql .= "LEFT JOIN products p ON s.product_id = p.id ";
+    $sql .= "WHERE s.date BETWEEN '{$start_date}' AND '{$end_date}' ";
+    $sql .= "GROUP BY DATE(s.date), p.name ";
+    $sql .= "ORDER BY DATE(s.date) DESC";
+    
+    // Execute query directly
+    $result = $db->query($sql);
+    
+    // Check if query failed
+    if($result === false) {
+      return array();
+    }
+    
+    // Check if no rows found
+    if($db->num_rows($result) <= 0) {
+      return array();
+    }
+    
+    // Manually process results for safety
+    $sales_data = array();
+    while($row = $db->fetch_assoc($result)) {
+      if(is_array($row)) {
+        $sales_data[] = $row;
+      }
+    }
+    
+    return $sales_data;
+  } catch (Exception $e) {
+    return array();
+  }
 }
+
 /*--------------------------------------------------------------*/
 /* Function for Generate Daily sales report
 /*--------------------------------------------------------------*/
-function  dailySales($year,$month){
+function dailySales($year,$month){
   global $db;
   $sql  = "SELECT s.qty,";
   $sql .= " DATE_FORMAT(s.date, '%Y-%m-%e') AS date,p.name,";
@@ -338,7 +430,7 @@ function  dailySales($year,$month){
 /*--------------------------------------------------------------*/
 /* Function for Generate Monthly sales report
 /*--------------------------------------------------------------*/
-function  monthlySales($year){
+function monthlySales($year){
   global $db;
   $sql  = "SELECT s.qty,";
   $sql .= " DATE_FORMAT(s.date, '%Y-%m-%e') AS date,p.name,";

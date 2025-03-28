@@ -2,7 +2,7 @@
   $page_title = 'Database Backup';
   require_once('includes/load.php');
   // Checking what level user has permission to view this page
-  page_require_level(1);
+  page_require_level(3);
 ?>
 <?php include_once('layouts/header.php'); ?>
 
