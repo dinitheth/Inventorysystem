@@ -80,7 +80,7 @@
 <div class="row dashboard-cards">
     <!-- Users Card -->
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
-        <a href="users.php" class="dashboard-card bg-secondary1">
+        <a class="dashboard-card bg-secondary1">
             <div class="card-icon">
                 <i class="glyphicon glyphicon-user"></i>
             </div>
@@ -93,7 +93,7 @@
 
     <!-- Categories Card -->
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
-        <a href="categorie.php" class="dashboard-card bg-red">
+        <a class="dashboard-card bg-red">
             <div class="card-icon">
                 <i class="glyphicon glyphicon-th-large"></i>
             </div>
@@ -106,7 +106,7 @@
 
     <!-- Products Card -->
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
-        <a href="product.php" class="dashboard-card bg-blue2">
+        <a class="dashboard-card bg-blue2">
             <div class="card-icon">
                 <i class="glyphicon glyphicon-shopping-cart"></i>
             </div>
@@ -119,7 +119,7 @@
 
     <!-- Sales Card - Updated to show total sales amount -->
     <div class="col-lg-3 col-sm-6 col-12 d-flex">
-        <a href="sales.php" class="dashboard-card bg-green">
+        <a class="dashboard-card bg-green">
             <div class="card-icon" style="font-size: 22px; font-weight: bold; margin-bottom: -0.3px;">
                 Rs.
             </div>
@@ -209,27 +209,21 @@
         </strong>
       </div>
       <div class="panel-body">
-
-        <div class="list-group">
-      <?php foreach ($recent_products as  $recent_product): ?>
-            <a class="list-group-item clearfix" href="edit_product.php?id=<?php echo    (int)$recent_product['id'];?>">
-                <h4 class="list-group-item-heading">
-                 <?php if($recent_product['media_id'] === '0'): ?>
-                    <img class="img-avatar img-circle" src="uploads/products/no_image.png" alt="">
-                  <?php else: ?>
-                  <img class="img-avatar img-circle" src="uploads/products/<?php echo $recent_product['image'];?>" alt="" />
-                <?php endif;?>
-                <?php echo remove_junk(first_character($recent_product['name']));?>
-                  <span class="label label-warning pull-right">
-                 R.s <?php echo (int)$recent_product['sale_price']; ?>
-                  </span>
-                </h4>
-                <span class="list-group-item-text pull-right">
-                <?php echo remove_junk(first_character($recent_product['categorie'])); ?>
-              </span>
-          </a>
-      <?php endforeach; ?>
-    </div>
+      <div class="list-group">
+  <?php foreach ($recent_products as  $recent_product): ?>
+    <a class="list-group-item clearfix" href="edit_product.php?id=<?php echo (int)$recent_product['id'];?>">
+      <h4 class="list-group-item-heading">
+        <?php echo remove_junk(first_character($recent_product['name']));?>
+        <span class="label label-warning pull-right">
+          Rs. <?php echo (int)$recent_product['sale_price']; ?>
+        </span>
+      </h4>
+      <span class="list-group-item-text pull-right">
+        <?php echo remove_junk(first_character($recent_product['categorie'])); ?>
+      </span>
+    </a>
+  <?php endforeach; ?>
+</div>
   </div>
  </div>
 </div>
